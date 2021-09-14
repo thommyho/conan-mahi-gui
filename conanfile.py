@@ -26,6 +26,7 @@ class MahiGuiConan(ConanFile):
     exports_sources = "CMakeLists.txt"
     requires = (
         "mahi_util/1.0.0"
+    )
     _cmake = None
 
     @property
