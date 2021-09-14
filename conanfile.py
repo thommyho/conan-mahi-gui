@@ -12,8 +12,8 @@ def is_tool(name):
     return which(name) is not None
 
 
-class MahiUtilsConan(ConanFile):
-    name = "mahi_util"
+class MahiGuiConan(ConanFile):
+    name = "mahi_gui"
     description = "Modern Web Framework for C++"
     homepage = "https://github.com/oatpp/oatpp"
     license = "MIT"
@@ -24,6 +24,8 @@ class MahiUtilsConan(ConanFile):
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
     exports_sources = "CMakeLists.txt"
+    requires = (
+        "mahi_util/1.0.0"
     _cmake = None
 
     @property
@@ -51,7 +53,7 @@ class MahiUtilsConan(ConanFile):
 
     def source(self):
         tools.get(**self.conan_data["sources"][self.version])
-        os.rename("mahi-util-master", self._source_subfolder)
+        os.rename("mahi-gui-master", self._source_subfolder)
 
     def _configure_cmake(self):
         if self._cmake:
@@ -61,6 +63,7 @@ class MahiUtilsConan(ConanFile):
         else:
             self._cmake = CMake(self)
         self._cmake.definitions["MAHI_UTIL_EXAMPLES"] = False
+        self._cmake.definitions["MAHI_GUI_EXAMPLES"] = False
         self._cmake.configure(build_folder=self._build_subfolder,
                               source_folder=self._source_subfolder)
         return self._cmake
@@ -76,23 +79,32 @@ class MahiUtilsConan(ConanFile):
         if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
             if self.settings.build_type == "Debug" or self.settings.build_type == "RelWithDebInfo":
                 self.output.info("Searching for pdbs")
-                patterns = ['util', 'fmt']
+                patterns = ['util', 'fmt', 'glad', 'glfw',
+                            'nanovg', 'gui', 'clipper', 'nfd']
                 for root, dirs, files in os.walk(self._build_subfolder):
                     for pattern in patterns:
                         for filename in fnmatch.filter(files, pattern+'*.pdb'):
                             self.copy(pattern=filename, dst="lib",
                                       src=root, keep_path=False)
                             self.output.info("Copied pdb: %s" % filename)
-        self.copy('*', src=os.path.join(self._source_subfolder,
-                                        '3rdparty', 'fmt', 'include'), dst="include")
+        self.copy('nanovg_gl_utils.h', src=os.path.join(
+            self._source_subfolder, '3rdparty', 'nanovg', 'src'), dst="include")
 
     def package_info(self):
-        self.cpp_info.names["cmake_find_package"] = "mahi_util"
-        self.cpp_info.names["cmake_find_package_multi"] = "mahi_util"
-        self.cpp_info.components["_mahi_util"].names["cmake_find_package"] = "mahi_util"
-        self.cpp_info.components["_mahi_util"].names["cmake_find_package_multi"] = "mahi_util"
+        self.cpp_info.names["cmake_find_package"] = "mahi_gui"
+        self.cpp_info.names["cmake_find_package_multi"] = "mahi_gui"
+        self.cpp_info.components["_mahi_gui"].names["cmake_find_package"] = "mahi_gui"
+        self.cpp_info.components["_mahi_gui"].names["cmake_find_package_multi"] = "mahi_gui"
         if self.settings.build_type == "Debug":
-            self.cpp_info.components["_mahi_util"].libs = [
-                "mahi-util-d", "fmtd"]
+            self.cpp_info.components["_mahi_gui"].libs = [
+                "mahi-gui-d", "mahi-util-d", "fmtd", "glad", "glfw3", "nanovg", "nfd"]
         else:
-            self.cpp_info.components["_mahi_util"].libs = ["mahi-util", "fmt"]
+            self.cpp_info.components["_mahi_gui"].libs = [
+                "mahi-gui", "mahi-util", "fmt", "glad", "glfw3", "nanovg", "nfd"]
+        self.cpp_info.components["_mahi_gui"].requires.append(
+            "mahi_util::mahi_util")
+        if self.settings.os == "Windows":
+            self.cpp_info.components["_mahi_gui"].libs.append("version")
+            self.cpp_info.components["_mahi_gui"].libs.append("shcore")
+            self.cpp_info.components["_mahi_gui"].libs.append("winmm")
+            self.cpp_info.components["_mahi_gui"].libs.append("pdh")
